@@ -23,9 +23,8 @@ class CountryRepositoryImpl @Inject constructor(
 
     override suspend fun seedIfEmpty() {
         val cachedCountries = dao.getAll()
-        if (cachedCountries.isNotEmpty() && cachedCountries.any { it.cachedAt > BUNDLED_SEED_TIMESTAMP }) {
-            return
-        }
+        if (cachedCountries.any { it.cachedAt > BUNDLED_SEED_TIMESTAMP }) return
+        if (cachedCountries.isNotEmpty()) return  // seed уже есть
 
         dao.insertAll(
             BundledCountriesSeed.countries.map {
