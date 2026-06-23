@@ -16,8 +16,8 @@ import javax.inject.Singleton
 class WorkManagerScheduler @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) {
-    fun scheduleOfflinePreload() {
-        val request = OneTimeWorkRequestBuilder<OfflinePreloadWorker>()
+    fun scheduleInitialCountriesSync() {
+        val request = OneTimeWorkRequestBuilder<InitialCountriesSyncWorker>()
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -26,10 +26,14 @@ class WorkManagerScheduler @Inject constructor(
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
-            OFFLINE_PRELOAD_WORK,
+            INITIAL_COUNTRIES_SYNC_WORK,
             ExistingWorkPolicy.KEEP,
             request
         )
+    }
+
+    fun scheduleOfflinePreload() {
+        scheduleInitialCountriesSync()
     }
 
     fun schedulePeriodicCacheRefresh(enabled: Boolean) {
@@ -70,7 +74,8 @@ class WorkManagerScheduler @Inject constructor(
     }
 
     companion object {
-        const val OFFLINE_PRELOAD_WORK = "offline_preload"
+        const val INITIAL_COUNTRIES_SYNC_WORK = "initial_countries_sync"
+        const val OFFLINE_PRELOAD_WORK = INITIAL_COUNTRIES_SYNC_WORK
         const val PERIODIC_CACHE_REFRESH_WORK = "periodic_cache_refresh"
         const val IMMEDIATE_REFRESH_WORK = "immediate_cache_refresh"
     }

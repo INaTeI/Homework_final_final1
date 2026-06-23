@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface CountryRepository {
     fun observeCountries(): Flow<List<Country>>
+    suspend fun seedIfEmpty() = Unit
     suspend fun refreshCountries()
     suspend fun getCountry(code: String): Country
     suspend fun hasCachedCountries(): Boolean

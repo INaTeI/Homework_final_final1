@@ -21,6 +21,19 @@ class CountryRepositoryImpl @Inject constructor(
         return dao.observeAll().map { list -> list.map { it.toCountry() } }
     }
 
+    override suspend fun seedIfEmpty() {
+        val cachedCountries = dao.getAll()
+        if (cachedCountries.isNotEmpty() && cachedCountries.any { it.cachedAt > BUNDLED_SEED_TIMESTAMP }) {
+            return
+        }
+
+        dao.insertAll(
+            BundledCountriesSeed.countries.map {
+                CountryEntity.fromCountry(it, BUNDLED_SEED_TIMESTAMP)
+            }
+        )
+    }
+
     override suspend fun refreshCountries() {
         val now = System.currentTimeMillis()
         val countries = api.getCountries().map { it.toCountry() }
@@ -54,3 +67,5 @@ class CountryRepositoryImpl @Inject constructor(
         flag = flags.png
     )
 }
+
+private const val BUNDLED_SEED_TIMESTAMP = 0L

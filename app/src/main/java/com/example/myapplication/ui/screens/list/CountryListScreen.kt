@@ -119,7 +119,7 @@ fun CountryListScreen(
                         onRefresh = { vm.loadCountries(forceRefresh = true) }
                     ) {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(state.countries) { country ->
+                            items(state.countries, key = { it.code }) { country -> //key чтобы меньше пересоздавал элементы
                                 CountryCard(
                                     country = country,
                                     isFavourite = state.favouriteCodes.contains(country.code),

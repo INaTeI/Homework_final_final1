@@ -68,21 +68,12 @@ class CountriesListViewModel @Inject constructor(
         .onStart { emit(RefreshRequest(force = false)) }
         .flatMapLatest { request ->
             flow {
-                val ttl = preferences.observeCacheTtl().first()
-                val lastSync = repository.getLastCacheTimestamp()
-                val isStale = CachePolicy.isStale(lastSync, ttl)
-
-                if (!request.force && repository.hasCachedCountries() && !isStale) {
-                    emit(CountriesRequestState.Loaded)
-                    return@flow
+                if (repository.hasCachedCountries() && repository.getLastCacheTimestamp() <= 0L) {
+                    repository.seedIfEmpty()
                 }
 
                 if (!request.force && repository.hasCachedCountries()) {
                     emit(CountriesRequestState.Loaded)
-                    try {
-                        repository.refreshCountries()
-                    } catch (_: Exception) {
-                    }
                     return@flow
                 }
 
@@ -97,6 +88,11 @@ class CountriesListViewModel @Inject constructor(
                         }
                     )
                 } catch (_: Exception) {
+                    repository.seedIfEmpty()
+                    if (repository.hasCachedCountries()) {
+                        emit(CountriesRequestState.Loaded)
+                        return@flow
+                    }
                     emit(CountriesRequestState.Error("Ошибка загрузки"))
                 }
             }

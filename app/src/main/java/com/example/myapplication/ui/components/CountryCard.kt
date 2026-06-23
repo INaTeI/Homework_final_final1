@@ -2,6 +2,7 @@ package com.example.myapplication.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.myapplication.domain.model.Country
 import com.example.myapplication.ui.TestTags
@@ -51,11 +53,20 @@ fun CountryCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = rememberAsyncImagePainter(country.flag),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp)
-            )
+            if (country.flag.startsWith("http")) {
+                Image(
+                    painter = rememberAsyncImagePainter(country.flag),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier.size(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(country.flag, fontSize = 32.sp)
+                }
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

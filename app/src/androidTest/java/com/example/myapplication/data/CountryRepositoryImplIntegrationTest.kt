@@ -15,9 +15,11 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class CountryRepositoryImplIntegrationTest {
@@ -64,6 +66,44 @@ class CountryRepositoryImplIntegrationTest {
 
             val persisted = database.countriesDao().getAll()
             assertEquals(firstLoaded.map { it.code }.toSet(), persisted.map { it.code }.toSet())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun refreshCountries_whenApiFailsAndCacheIsEmpty_keepsRoomEmpty() = runTest {
+        val preferences = mockk<AppPreferences>(relaxed = true)
+        val failingRepository = CountryRepositoryImpl(
+            FakeCountriesApi(failAll = true),
+            database.countriesDao(),
+            preferences
+        )
+
+        try {
+            failingRepository.refreshCountries()
+        } catch (exception: IOException) {
+            assertEquals(emptyList<Country>(), database.countriesDao().getAll().map { it.toCountry() })
+            return@runTest
+        }
+
+        error("Expected refreshCountries to fail when API is unavailable and cache is empty")
+    }
+
+    @Test
+    fun observeCountries_returnsCachedRoomData_whenNextLaunchHasNoNetwork() = runTest {
+        repository.refreshCountries()
+
+        val preferences = mockk<AppPreferences>(relaxed = true)
+        val offlineRepository = CountryRepositoryImpl(
+            FakeCountriesApi(failAll = true),
+            database.countriesDao(),
+            preferences
+        )
+
+        offlineRepository.observeCountries().test {
+            val cached = awaitItem()
+            assertEquals(2, cached.size)
+            assertTrue(cached.map { it.code }.containsAll(listOf("UA", "PL")))
             cancelAndIgnoreRemainingEvents()
         }
     }

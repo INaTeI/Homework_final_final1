@@ -75,6 +75,19 @@ class CountriesListViewModelTest {
     }
 
     @Test
+    fun initialLoad_withCachedCountriesAndNetworkError_showsCachedData() = runTest {
+        val repository = FakeCountryRepository().apply {
+            setCountries(listOf(TestCountries.ukraine, TestCountries.poland))
+            shouldFailRefresh = true
+        }
+        val viewModel = createViewModel(repository)
+        advanceUntilIdle()
+
+        assertEquals(CountriesRequestState.Loaded, viewModel.uiState.value.requestState)
+        assertEquals(2, viewModel.uiState.value.countries.size)
+    }
+
+    @Test
     fun search_withNoMatches_setsEmptyState() = runTest {
         val repository = FakeCountryRepository().apply {
             setCountries(listOf(TestCountries.ukraine))

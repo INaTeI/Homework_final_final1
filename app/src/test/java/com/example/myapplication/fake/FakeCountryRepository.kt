@@ -17,6 +17,8 @@ class FakeCountryRepository : CountryRepository {
 
     override fun observeCountries(): Flow<List<Country>> = countriesFlow.asStateFlow()
 
+    override suspend fun seedIfEmpty() = Unit
+
     override suspend fun refreshCountries() {
         refreshCallCount++
         if (shouldFailRefresh) {
