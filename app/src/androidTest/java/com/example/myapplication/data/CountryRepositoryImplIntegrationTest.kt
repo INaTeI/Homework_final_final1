@@ -7,17 +7,19 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.turbine.test
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.CountryEntity
+import com.example.myapplication.data.repository.CountryNotCachedException
 import com.example.myapplication.data.repository.CountryRepositoryImpl
 import com.example.myapplication.data.dto.CountryDto
+import com.example.myapplication.data.repository.EmptyCountriesResponseException
+import com.example.myapplication.data.repository.InvalidCountriesResponseException
 import com.example.myapplication.domain.model.Country
-import com.example.myapplication.domain.preferences.AppPreferences
 import com.example.myapplication.fake.FakeCountriesApi
-import io.mockk.coEvery
-import io.mockk.mockk
+import com.example.myapplication.fake.FakeUserPreferencesRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,8 +37,7 @@ class CountryRepositoryImplIntegrationTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        val preferences = mockk<AppPreferences>(relaxed = true)
-        coEvery { preferences.setLastSyncTimestamp(any()) } returns Unit
+        val preferences = FakeUserPreferencesRepository()
         repository = CountryRepositoryImpl(FakeCountriesApi(), database.countriesDao(), preferences)
     }
 
@@ -104,8 +105,7 @@ class CountryRepositoryImplIntegrationTest {
         repository.refreshCountries()
         assertEquals(setOf("UA", "PL"), database.countriesDao().getCached().map { it.code }.toSet())
 
-        val preferences = mockk<AppPreferences>(relaxed = true)
-        coEvery { preferences.setLastSyncTimestamp(any()) } returns Unit
+        val preferences = FakeUserPreferencesRepository()
         val updatedRepository = CountryRepositoryImpl(
             FakeCountriesApi(
                 countries = mapOf(
@@ -126,7 +126,7 @@ class CountryRepositoryImplIntegrationTest {
     fun refreshCountries_whenApiFails_keepsExistingRoomCache() = runTest {
         repository.refreshCountries()
 
-        val preferences = mockk<AppPreferences>(relaxed = true)
+        val preferences = FakeUserPreferencesRepository()
         val failingRepository = CountryRepositoryImpl(
             FakeCountriesApi(failAll = true),
             database.countriesDao(),
@@ -144,9 +144,41 @@ class CountryRepositoryImplIntegrationTest {
     }
 
     @Test
+    fun refreshCountries_whenApiReturnsEmptyList_doesNotCreateCache() = runTest {
+        val preferences = FakeUserPreferencesRepository()
+        val emptyRepository = CountryRepositoryImpl(
+            FakeCountriesApi(countries = emptyMap()),
+            database.countriesDao(),
+            preferences
+        )
+
+        assertFailsWithException<EmptyCountriesResponseException> {
+            emptyRepository.refreshCountries()
+        }
+
+        assertEquals(emptyList<Country>(), database.countriesDao().getCached().map { it.toCountry() })
+    }
+
+    @Test
+    fun refreshCountries_whenApiReturnsInvalidData_doesNotCreateCache() = runTest {
+        val preferences = FakeUserPreferencesRepository()
+        val invalidRepository = CountryRepositoryImpl(
+            FakeCountriesApi(countries = null),
+            database.countriesDao(),
+            preferences
+        )
+
+        assertFailsWithException<InvalidCountriesResponseException> {
+            invalidRepository.refreshCountries()
+        }
+
+        assertEquals(emptyList<Country>(), database.countriesDao().getCached().map { it.toCountry() })
+    }
+
+    @Test
     fun getLastCacheTimestamp_usesOnlyRealRoomCache() = runTest {
-        val preferences = mockk<AppPreferences>(relaxed = true)
-        coEvery { preferences.getLastSyncTimestamp() } returns 999L
+        val preferences = FakeUserPreferencesRepository()
+        preferences.setLastSyncTimestamp(999L)
         val repository = CountryRepositoryImpl(
             FakeCountriesApi(),
             database.countriesDao(),
@@ -161,8 +193,21 @@ class CountryRepositoryImplIntegrationTest {
     }
 
     @Test
+    fun getCountry_whenMissingFromCache_doesNotRefreshFromNetwork() = runTest {
+        val api = FakeCountriesApi(failAll = true)
+        val preferences = FakeUserPreferencesRepository()
+        val repository = CountryRepositoryImpl(api, database.countriesDao(), preferences)
+
+        assertFailsWithException<CountryNotCachedException> {
+            repository.getCountry("UA")
+        }
+
+        assertEquals(0, api.allRequestCount)
+    }
+
+    @Test
     fun refreshCountries_whenApiFailsAndCacheIsEmpty_keepsRoomEmpty() = runTest {
-        val preferences = mockk<AppPreferences>(relaxed = true)
+        val preferences = FakeUserPreferencesRepository()
         val failingRepository = CountryRepositoryImpl(
             FakeCountriesApi(failAll = true),
             database.countriesDao(),
@@ -183,7 +228,7 @@ class CountryRepositoryImplIntegrationTest {
     fun observeCountries_returnsCachedRoomData_whenNextLaunchHasNoNetwork() = runTest {
         repository.refreshCountries()
 
-        val preferences = mockk<AppPreferences>(relaxed = true)
+        val preferences = FakeUserPreferencesRepository()
         val offlineRepository = CountryRepositoryImpl(
             FakeCountriesApi(failAll = true),
             database.countriesDao(),
@@ -196,5 +241,15 @@ class CountryRepositoryImplIntegrationTest {
             assertTrue(cached.map { it.code }.containsAll(listOf("UA", "PL")))
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    private suspend inline fun <reified T : Throwable> assertFailsWithException(block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (exception: Throwable) {
+            if (exception is T) return
+            throw exception
+        }
+        fail("Expected ${T::class.java.simpleName}")
     }
 }

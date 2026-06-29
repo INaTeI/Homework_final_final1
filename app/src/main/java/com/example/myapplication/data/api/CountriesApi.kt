@@ -7,7 +7,7 @@ import retrofit2.http.GET
 
 interface CountriesApi {
 
-    @GET("countries?limit=300")
+    @GET("countries?")
     suspend fun getCountries(): CountriesResponseDto
 
 }

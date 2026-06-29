@@ -31,6 +31,10 @@ class NotesRepositoryTest {
         override suspend fun delete(profileId: Long, countryCode: String) {
             notes.value = null
         }
+
+        override suspend fun deleteAllForProfile(profileId: Long) {
+            notes.value = null
+        }
     }
 
     private val profileRepository = mockk<ProfileRepository> {

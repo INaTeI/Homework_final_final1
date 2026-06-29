@@ -89,7 +89,7 @@ class CountriesListViewModel @Inject constructor(
                         }
                     )
                 } catch (exception: Exception) {
-                    Log.e(TAG, "Failed to refresh countries", exception)
+                    logRefreshError(exception)
                     emit(CountriesRequestState.Error(exception.toUserMessage()))
                 }
             }
@@ -196,5 +196,13 @@ class CountriesListViewModel @Inject constructor(
         is IOException -> "Нет подключения к интернету"
         is IllegalStateException -> "Неверный формат ответа API"
         else -> "Ошибка загрузки"
+    }
+
+    private fun logRefreshError(exception: Exception) {
+        try {
+            Log.e(TAG, "Failed to refresh countries", exception)
+        } catch (_: RuntimeException) {
+            // android.util.Log is not available in local JVM tests.
+        }
     }
 }

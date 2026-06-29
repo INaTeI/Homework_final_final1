@@ -5,12 +5,13 @@ import com.example.myapplication.data.dto.CountriesResponseDto
 import com.example.myapplication.data.dto.CountryDto
 
 class FakeCountriesApi(
-    private val countries: Map<String, CountryDto> = defaultCountries,
+    private val countries: Map<String, CountryDto>? = defaultCountries,
     private val failAll: Boolean = false,
     private val failOnce: Boolean = false
 ) : CountriesApi {
 
-    private var allRequestCount = 0
+    var allRequestCount = 0
+        private set
 
     override suspend fun getCountries(): CountriesResponseDto {
         allRequestCount++

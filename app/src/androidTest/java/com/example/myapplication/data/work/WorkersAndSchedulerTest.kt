@@ -170,7 +170,8 @@ class WorkersAndSchedulerTest {
         var refreshCallCount = 0
             private set
 
-        override fun observeCountries(): Flow<List<Country>> = MutableStateFlow(emptyList()).asStateFlow()
+        override fun observeCountries(): Flow<List<Country>> =
+            MutableStateFlow<List<Country>>(emptyList()).asStateFlow()
 
         override suspend fun refreshCountries() {
             refreshCallCount++

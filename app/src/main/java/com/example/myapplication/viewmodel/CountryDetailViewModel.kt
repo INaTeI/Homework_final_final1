@@ -87,7 +87,7 @@ class CountryDetailViewModel @Inject constructor(
                     }
                 }
             } catch (exception: Exception) {
-                Log.e(TAG, "Failed to load country $targetCode", exception)
+                logLoadError(targetCode, exception)
                 uiState = uiState.copy(
                     requestState = CountriesRequestState.Error(exception.toUserMessage())
                 )
@@ -148,5 +148,13 @@ class CountryDetailViewModel @Inject constructor(
     private fun Exception.toUserMessage(): String = when (this) {
         is CountryNotCachedException -> "Страна не найдена в локальном кэше"
         else -> "Ошибка загрузки"
+    }
+
+    private fun logLoadError(countryCode: String, exception: Exception) {
+        try {
+            Log.e(TAG, "Failed to load country $countryCode", exception)
+        } catch (_: RuntimeException) {
+            // android.util.Log is not available in local JVM tests.
+        }
     }
 }

@@ -14,14 +14,14 @@ class CachePolicyTest {
 
     @Test
     fun isStale_returnsFalse_whenWithinTtl() {
-        val now = 1_000_000L
+        val now = 100_000_000L
         val lastSync = now - 60 * 60 * 1000L
         assertFalse(CachePolicy.isStale(lastSync, CacheTtl.HOURS_24, now))
     }
 
     @Test
     fun isStale_returnsTrue_whenTtlExpired() {
-        val now = 1_000_000L
+        val now = 100_000_000L
         val lastSync = now - 25 * 60 * 60 * 1000L
         assertTrue(CachePolicy.isStale(lastSync, CacheTtl.HOURS_24, now))
     }
