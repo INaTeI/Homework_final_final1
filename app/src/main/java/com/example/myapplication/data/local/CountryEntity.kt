@@ -12,12 +12,12 @@ data class CountryEntity(
     val region: String,
     val population: Long,
     val flag: String,
-    val cachedAt: Long = System.currentTimeMillis()
+    val cachedAt: Long = 0L
 ) {
     fun toCountry() = Country(code, name, capital, region, population, flag)
 
     companion object {
-        fun fromCountry(country: Country, cachedAt: Long = System.currentTimeMillis()) =
+        fun fromCountry(country: Country, cachedAt: Long = 0L) =
             CountryEntity(
                 country.code,
                 country.name,
@@ -27,5 +27,8 @@ data class CountryEntity(
                 country.flag,
                 cachedAt
             )
+
+        fun fromNetwork(country: Country, cachedAt: Long = System.currentTimeMillis()) =
+            fromCountry(country, cachedAt)
     }
 }

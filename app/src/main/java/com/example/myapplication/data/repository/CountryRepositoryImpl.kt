@@ -9,6 +9,7 @@ import com.example.myapplication.domain.preferences.AppPreferences
 import com.example.myapplication.domain.repository.CountryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 import javax.inject.Inject
 
 class CountryRepositoryImpl @Inject constructor(
@@ -18,53 +19,54 @@ class CountryRepositoryImpl @Inject constructor(
 ) : CountryRepository {
 
     override fun observeCountries(): Flow<List<Country>> {
-        return dao.observeAll().map { list -> list.map { it.toCountry() } }
-    }
-
-    override suspend fun seedIfEmpty() {
-        val cachedCountries = dao.getAll()
-        if (cachedCountries.any { it.cachedAt > BUNDLED_SEED_TIMESTAMP }) return
-        if (cachedCountries.isNotEmpty()) return  // seed уже есть
-
-        dao.insertAll(
-            BundledCountriesSeed.countries.map {
-                CountryEntity.fromCountry(it, BUNDLED_SEED_TIMESTAMP)
-            }
-        )
+        return dao.observeCached().map { list ->
+            list.map { it.toCountry() }
+        }
     }
 
     override suspend fun refreshCountries() {
         val now = System.currentTimeMillis()
-        val countries = api.getCountries().map { it.toCountry() }
-        dao.insertAll(countries.map { CountryEntity.fromCountry(it, now) })
+        val networkData = api.getCountries().data
+            ?: throw InvalidCountriesResponseException()
+        val countries = networkData.map { (code, dto) ->
+            dto.toCountry(code)
+        }
+        if (countries.isEmpty()) {
+            throw EmptyCountriesResponseException()
+        }
+
+        dao.replaceCached(countries.map { CountryEntity.fromNetwork(it, now) })
         preferences.setLastSyncTimestamp(now)
     }
 
     override suspend fun getCountry(code: String): Country {
-        dao.getByCode(code)?.toCountry()?.let { return it }
+        dao.getByCode(code)?.takeIf { it.cachedAt > 0L }?.toCountry()?.let { return it }
 
-        val dto = api.getCountry(code).first()
-        val country = dto.toCountry()
-        dao.insert(CountryEntity.fromCountry(country))
-        return country
+        throw CountryNotCachedException(code)
     }
 
     override suspend fun hasCachedCountries(): Boolean {
-        return dao.getAll().isNotEmpty()
+        return dao.getCached().isNotEmpty()
     }
 
     override suspend fun getLastCacheTimestamp(): Long {
-        return dao.getLastCacheTimestamp() ?: preferences.getLastSyncTimestamp()
+        return dao.getLastCacheTimestamp() ?: 0L
     }
 
-    private fun CountryDto.toCountry() = Country(
-        name = name.common,
-        code = cca2,
-        capital = capital?.firstOrNull() ?: "Unknown",
-        region = region ?: "",
-        population = population ?: 0,
-        flag = flags.png
+    private fun CountryDto.toCountry(code: String) = Country(
+        name = country,
+        code = code,
+        capital = "Unknown",
+        region = region,
+        population = 0,
+        flag = "https://flagcdn.com/w320/${code.lowercase(Locale.US)}.png"
     )
 }
 
-private const val BUNDLED_SEED_TIMESTAMP = 0L
+class EmptyCountriesResponseException : IllegalStateException("API returned no countries")
+
+class InvalidCountriesResponseException : IllegalStateException("API returned invalid countries response")
+
+class CountryNotCachedException(code: String) : NoSuchElementException(
+    "Country $code is not available in the local cache"
+)

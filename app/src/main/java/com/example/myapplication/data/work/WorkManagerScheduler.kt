@@ -32,10 +32,6 @@ class WorkManagerScheduler @Inject constructor(
         )
     }
 
-    fun scheduleOfflinePreload() {
-        scheduleInitialCountriesSync()
-    }
-
     fun schedulePeriodicCacheRefresh(enabled: Boolean) {
         if (!enabled) {
             WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_CACHE_REFRESH_WORK)
@@ -75,7 +71,6 @@ class WorkManagerScheduler @Inject constructor(
 
     companion object {
         const val INITIAL_COUNTRIES_SYNC_WORK = "initial_countries_sync"
-        const val OFFLINE_PRELOAD_WORK = INITIAL_COUNTRIES_SYNC_WORK
         const val PERIODIC_CACHE_REFRESH_WORK = "periodic_cache_refresh"
         const val IMMEDIATE_REFRESH_WORK = "immediate_cache_refresh"
     }

@@ -1,5 +1,6 @@
 package com.example.myapplication.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.repository.CollectionsRepository
+import com.example.myapplication.data.repository.CountryNotCachedException
 import com.example.myapplication.data.repository.FavouritesRepository
 import com.example.myapplication.data.repository.HistoryRepository
 import com.example.myapplication.data.repository.NotesRepository
@@ -17,6 +19,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "CountryDetailViewModel"
 
 @HiltViewModel
 class CountryDetailViewModel @Inject constructor(
@@ -82,9 +86,10 @@ class CountryDetailViewModel @Inject constructor(
                         uiState = uiState.copy(collections = collections)
                     }
                 }
-            } catch (_: Exception) {
+            } catch (exception: Exception) {
+                Log.e(TAG, "Failed to load country $targetCode", exception)
                 uiState = uiState.copy(
-                    requestState = CountriesRequestState.Error("Ошибка загрузки")
+                    requestState = CountriesRequestState.Error(exception.toUserMessage())
                 )
             }
         }
@@ -138,5 +143,10 @@ class CountryDetailViewModel @Inject constructor(
             collectionsRepository.addCountryToCollection(collectionId, activeCode)
             uiState = uiState.copy(showAddToCollectionDialog = false)
         }
+    }
+
+    private fun Exception.toUserMessage(): String = when (this) {
+        is CountryNotCachedException -> "Страна не найдена в локальном кэше"
+        else -> "Ошибка загрузки"
     }
 }

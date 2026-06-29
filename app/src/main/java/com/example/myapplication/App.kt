@@ -33,7 +33,7 @@ class App : Application(), Configuration.Provider {
         super.onCreate()
         appScope.launch {
             profileRepository.ensureDefaultProfile()
-            workManagerScheduler.scheduleOfflinePreload()
+            workManagerScheduler.scheduleInitialCountriesSync()
             val backgroundSync = preferences.observeBackgroundSyncEnabled().first()
             workManagerScheduler.schedulePeriodicCacheRefresh(backgroundSync)
         }

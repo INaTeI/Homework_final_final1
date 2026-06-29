@@ -71,7 +71,7 @@ class CountriesListViewModelTest {
 
         val state = viewModel.uiState.value.requestState
         assertTrue(state is CountriesRequestState.Error)
-        assertEquals("Ошибка загрузки", (state as CountriesRequestState.Error).message)
+        assertEquals("Нет подключения к интернету", (state as CountriesRequestState.Error).message)
     }
 
     @Test

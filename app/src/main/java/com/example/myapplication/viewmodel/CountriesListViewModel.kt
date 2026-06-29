@@ -1,7 +1,9 @@
 package com.example.myapplication.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.repository.EmptyCountriesResponseException
 import com.example.myapplication.data.sync.CachePolicy
 import com.example.myapplication.domain.preferences.AppPreferences
 import com.example.myapplication.data.repository.FavouritesRepository
@@ -26,9 +28,12 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 import javax.inject.Inject
 
 private const val SEARCH_DEBOUNCE_MS = 400L
+private const val TAG = "CountriesListViewModel"
 
 private data class RefreshRequest(val force: Boolean = false)
 
@@ -68,10 +73,6 @@ class CountriesListViewModel @Inject constructor(
         .onStart { emit(RefreshRequest(force = false)) }
         .flatMapLatest { request ->
             flow {
-                if (repository.hasCachedCountries() && repository.getLastCacheTimestamp() <= 0L) {
-                    repository.seedIfEmpty()
-                }
-
                 if (!request.force && repository.hasCachedCountries()) {
                     emit(CountriesRequestState.Loaded)
                     return@flow
@@ -87,13 +88,9 @@ class CountriesListViewModel @Inject constructor(
                             CountriesRequestState.Empty
                         }
                     )
-                } catch (_: Exception) {
-                    repository.seedIfEmpty()
-                    if (repository.hasCachedCountries()) {
-                        emit(CountriesRequestState.Loaded)
-                        return@flow
-                    }
-                    emit(CountriesRequestState.Error("Ошибка загрузки"))
+                } catch (exception: Exception) {
+                    Log.e(TAG, "Failed to refresh countries", exception)
+                    emit(CountriesRequestState.Error(exception.toUserMessage()))
                 }
             }
         }
@@ -192,4 +189,12 @@ class CountriesListViewModel @Inject constructor(
         lowercase()
             .replace(".", "")
             .trim()
+
+    private fun Exception.toUserMessage(): String = when (this) {
+        is EmptyCountriesResponseException -> "API вернул пустой список стран"
+        is HttpException -> "Ошибка сервера: ${code()}"
+        is IOException -> "Нет подключения к интернету"
+        is IllegalStateException -> "Неверный формат ответа API"
+        else -> "Ошибка загрузки"
+    }
 }

@@ -17,7 +17,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://restcountries.com/v3.1/")
+            .baseUrl("https://api.first.org/data/v1/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -27,3 +27,4 @@ object NetworkModule {
         return retrofit.create(CountriesApi::class.java)
     }
 }
+

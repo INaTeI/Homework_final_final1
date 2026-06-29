@@ -47,15 +47,15 @@ class WorkersAndSchedulerTest {
     }
 
     @Test
-    fun offlinePreload_refreshesWhenCacheIsEmpty() = runTest {
+    fun initialCountriesSync_refreshesWhenCacheIsEmpty() = runTest {
         val repository = FakeWorkerCountryRepository(hasCache = false)
-        val worker = TestListenableWorkerBuilder<OfflinePreloadWorker>(context)
+        val worker = TestListenableWorkerBuilder<InitialCountriesSyncWorker>(context)
             .setWorkerFactory(object : WorkerFactory() {
                 override fun createWorker(
                     appContext: Context,
                     workerClassName: String,
                     workerParameters: WorkerParameters
-                ) = OfflinePreloadWorker(appContext, workerParameters, repository)
+                ) = InitialCountriesSyncWorker(appContext, workerParameters, repository)
             })
             .build()
 
@@ -64,18 +64,18 @@ class WorkersAndSchedulerTest {
     }
 
     @Test
-    fun offlinePreload_retriesWhenInitialRefreshFails() = runTest {
+    fun initialCountriesSync_retriesWhenInitialRefreshFails() = runTest {
         val repository = FakeWorkerCountryRepository(
             hasCache = false,
             failRefresh = true
         )
-        val worker = TestListenableWorkerBuilder<OfflinePreloadWorker>(context)
+        val worker = TestListenableWorkerBuilder<InitialCountriesSyncWorker>(context)
             .setWorkerFactory(object : WorkerFactory() {
                 override fun createWorker(
                     appContext: Context,
                     workerClassName: String,
                     workerParameters: WorkerParameters
-                ) = OfflinePreloadWorker(appContext, workerParameters, repository)
+                ) = InitialCountriesSyncWorker(appContext, workerParameters, repository)
             })
             .build()
 
@@ -123,13 +123,13 @@ class WorkersAndSchedulerTest {
     }
 
     @Test
-    fun scheduler_enqueuesUniqueOfflinePreloadWork() {
+    fun scheduler_enqueuesUniqueInitialCountriesSyncWork() {
         val scheduler = WorkManagerScheduler(context)
 
-        scheduler.scheduleOfflinePreload()
+        scheduler.scheduleInitialCountriesSync()
 
         val workInfos = WorkManager.getInstance(context)
-            .getWorkInfosForUniqueWork(WorkManagerScheduler.OFFLINE_PRELOAD_WORK)
+            .getWorkInfosForUniqueWork(WorkManagerScheduler.INITIAL_COUNTRIES_SYNC_WORK)
             .get()
         assertEquals(1, workInfos.size)
         assertTrue(workInfos.first().state in listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.SUCCEEDED))
