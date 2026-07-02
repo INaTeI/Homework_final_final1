@@ -5,7 +5,7 @@ enum class RegionFilter(val label: String, private val apiRegion: String?) {
     EUROPE("Европа", "Europe"),
     ASIA("Азия", "Asia"),
     AFRICA("Африка", "Africa"),
-    AMERICAS("Америка", "Americas"),
+    AMERICAS("Америка", "North America"),
     OCEANIA("Океания", "Oceania");
 
     fun matches(country: Country): Boolean =
